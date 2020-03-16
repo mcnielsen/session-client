@@ -6,7 +6,7 @@ import {
     AlStopwatch,
     AlTriggerStream,
 } from '@al/common';
-import { AlDatacenterSessionEstablishedEvent } from '../events';
+import { AlDatacenterSessionEstablishedEvent, AlDatacenterSessionErrorEvent } from '../events';
 
 export class AlConduitClient
 {
@@ -197,6 +197,8 @@ export class AlConduitClient
                 return this.onDispatchReply(event);
             case "conduit.externalSessionReady":
                 return this.onExternalSessionEstablished(event);
+            case "conduit.externalSessionError":
+                return this.onExternalSessionError(event );
             default:
                 console.warn('O3ConduitService: Ignoring unrecognized message type: %s', event.data.type, event);
                 break;
@@ -207,6 +209,10 @@ export class AlConduitClient
         AlConduitClient.conduitWindow = event.source;
         AlConduitClient.conduitOrigin = event.origin;
         AlConduitClient.ready.resolve( true );
+        if ( typeof( event.data.cookiesDisabled ) === 'boolean' && event.data.cookiesDisabled ) {
+            console.warn("WARNING: conduit has indicated that 3rd party cookies are disabled, triggering session error event." );
+            AlConduitClient.events.trigger( new AlDatacenterSessionErrorEvent( "inapplicable", "cookie-configuration", event.data ) );
+        }
     }
 
     public onDispatchReply(event: any): void {
@@ -247,6 +253,13 @@ export class AlConduitClient
             };
         }
         AlConduitClient.events.trigger( new AlDatacenterSessionEstablishedEvent( event.data.locationId ) );
+    }
+
+    /**
+     * Raises an AlDatacenterSessionEventEvent
+     */
+    protected onExternalSessionError( event:any ) {
+        AlConduitClient.events.trigger( new AlDatacenterSessionErrorEvent( event.data.locationId, event.data.errorType || "unknown", event.data ) );
     }
 
     /**
