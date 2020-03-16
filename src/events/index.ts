@@ -1,7 +1,6 @@
 import { AlTrigger, AlTriggeredEvent } from '@al/common';
 import { AIMSUser, AIMSAccount } from '@al/client';
 import { AlEntitlementCollection } from '@al/subscriptions';
-import { AlSessionInstance } from '../al-session';
 import { AlExperienceTree } from '../types/al-experience.types';
 
 /**
@@ -22,7 +21,7 @@ export class AlSessionStartedEvent extends AlTriggeredEvent<void>
 @AlTrigger( 'AlSessionEnded' )
 export class AlSessionEndedEvent extends AlTriggeredEvent<void>
 {
-    constructor( public session:AlSessionInstance ) {
+    constructor() {
         super();
     }
 }
@@ -37,7 +36,7 @@ export class AlActingAccountChangedEvent extends AlTriggeredEvent<void>
 {
     constructor( public previousAccount:AIMSAccount,
                  public actingAccount:AIMSAccount,
-                 public session:AlSessionInstance ) {
+                ) {
         super();
     }
 }

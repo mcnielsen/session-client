@@ -5,11 +5,11 @@
  *  @copyright Alert Logic, Inc 2019
  */
 
-import { WebAuth } from 'auth0-js';
-import { AlLocatorService, AlLocation, AlBehaviorPromise, AlStopwatch } from '@al/common';
-import { ALSession } from '../index';
+import { AIMSClient, AIMSSessionDescriptor } from '@al/aims';
 import { ALClient } from '@al/client';
-import { AIMSClient, AIMSSessionDescriptor, AIMSAuthentication, AIMSUser, AIMSAccount } from '@al/aims';
+import { AlLocation, AlLocatorService, AlStopwatch } from '@al/common';
+import { WebAuth } from 'auth0-js';
+import { AlSession } from '../al-session';
 import { AlConduitClient } from './al-conduit-client';
 
 export class AlSessionDetector
@@ -64,7 +64,7 @@ export class AlSessionDetector
             /**
              * Does AlSession say we're active?  If so, then yey!
              */
-            if ( ALSession.isActive() ) {
+            if ( AlSession.isActive() ) {
                 return this.onDetectionSuccess( resolve );
             }
 
@@ -147,8 +147,8 @@ export class AlSessionDetector
     ingestExistingSession = async ( proposedSession: AIMSSessionDescriptor ):Promise<boolean> => {
         let session = await this.normalizeSessionDescriptor( proposedSession );
         try {
-            await ALSession.setAuthentication( session );
-            this.authenticated = ALSession.isActive();
+            await AlSession.setAuthentication( session );
+            this.authenticated = AlSession.isActive();
             return true;
         } catch( e ) {
             this.authenticated = false;
@@ -200,7 +200,7 @@ export class AlSessionDetector
             if ( session.authentication.user && session.authentication.account ) {
                 return resolve( session );
             }
-            let tokenInfo = AIMSClient.getTokenInfo( session.authentication.token )
+            AIMSClient.getTokenInfo( session.authentication.token )
                 .then(  tokenInfo => {
                             if ( typeof( tokenInfo.user ) === 'object' ) {
                                 session.authentication.user = tokenInfo.user;

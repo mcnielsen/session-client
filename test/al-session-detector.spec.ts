@@ -1,11 +1,11 @@
-import { AlSessionDetector, AlConduitClient } from '../src/utilities';
-import { ALSession, AlActingAccountResolvedEvent } from '../src';
-import { AIMSClient, AIMSAuthentication, AIMSSessionDescriptor } from '@al/aims';
-import { exampleSession } from './mocks/session-data.mocks';
-import { expect } from 'chai';
-import { describe, before } from 'mocha';
-import * as sinon from 'sinon';
+import { AIMSClient } from '@al/aims';
 import { WebAuth } from 'auth0-js';
+import { expect } from 'chai';
+import { describe } from 'mocha';
+import * as sinon from 'sinon';
+import { AlSession } from '../src';
+import { AlConduitClient, AlSessionDetector } from '../src/utilities';
+import { exampleSession } from './mocks/session-data.mocks';
 
 describe('AlSessionDetector', () => {
     let conduit:AlConduitClient;
@@ -172,7 +172,7 @@ describe('AlSessionDetector', () => {
         } );
         it( "should normalize and ingest a valid session descriptor", async () => {
             let normalizeStub = sinon.stub( sessionDetector, 'normalizeSessionDescriptor' ).returns( Promise.resolve( exampleSession ) );
-            ALSession.setOptions( { resolveAccountMetadata: false } );
+            AlSession.setOptions( { resolveAccountMetadata: false } );
             await sessionDetector.ingestExistingSession( {
                 authentication: {
                     token: exampleSession.authentication.token,
@@ -183,14 +183,14 @@ describe('AlSessionDetector', () => {
             } );
             expect( sessionDetector.authenticated ).to.equal( true );
             expect( errorStub.callCount ).to.equal( 0 );
-            ALSession.setOptions( { resolveAccountMetadata: true } );
+            AlSession.setOptions( { resolveAccountMetadata: true } );
         } );
     } );
 
     describe("detectSession()", () => {
         describe("with an existing session promise", () => {
             it( "should just return the existing promise", () => {
-                ALSession.deactivateSession();
+                AlSession.deactivateSession();
                 let fakePromise = new Promise<boolean>( ( resolve, reject ) => {} );
                 AlSessionDetector['detectionPromise'] = fakePromise;
 
@@ -202,8 +202,8 @@ describe('AlSessionDetector', () => {
         } );
         describe("with a local session", () => {
             it( "should resolve true", ( done ) => {
-                ALSession.deactivateSession();
-                ALSession.setAuthentication( exampleSession );
+                AlSession.deactivateSession();
+                AlSession.setAuthentication( exampleSession );
                 sessionDetector.detectSession().then( result => {
                     expect( result ).to.equal( true );
                     expect( sessionDetector.authenticated ).to.equal( true );
@@ -215,7 +215,7 @@ describe('AlSessionDetector', () => {
 
         describe("with a conduit session", () => {
             it( "should resolve true", ( done ) => {
-                ALSession.deactivateSession();
+                AlSession.deactivateSession();
                 let getSessionStub = sinon.stub( conduit, 'getSession' ).returns( Promise.resolve( exampleSession ) );
                 let ingestSessionStub = sinon.stub( sessionDetector, 'ingestExistingSession' ).returns( Promise.resolve( true ) );
                 sessionDetector.detectSession().then( result => {
@@ -234,7 +234,7 @@ describe('AlSessionDetector', () => {
                 getTokenInfoStub = sinon.stub( AIMSClient, 'getTokenInfo' ).returns( Promise.resolve( exampleSession.authentication ) );
             } );
             it( "should resolve true", ( done ) => {
-                ALSession.deactivateSession();
+                AlSession.deactivateSession();
 
                 let auth0AuthStub = sinon.stub( sessionDetector, 'getAuth0Authenticator' ).returns( <WebAuth><unknown>{
                     checkSession: ( config, callback ) => {
