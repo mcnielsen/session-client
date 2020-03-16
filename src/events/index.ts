@@ -81,3 +81,14 @@ export class AlDatacenterSessionEstablishedEvent extends AlTriggeredEvent<void>
         super();
     }
 }
+
+/**
+ * AlDatacenterSessionError event is used to indicate when there is a problem establishing or persisting a session in an external datacenter.
+ */
+@AlTrigger( 'AlDatacenterSessionError' )
+export class AlDatacenterSessionErrorEvent extends AlTriggeredEvent<void>
+{
+    constructor( public insightLocationId:string, public errorType:string, public errorDetails:unknown ) {
+        super();
+    }
+}
