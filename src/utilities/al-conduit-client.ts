@@ -1,4 +1,4 @@
-import { AIMSSessionDescriptor } from '@al/aims';
+import { AIMSSessionDescriptor, AIMSSessionDescriptor } from '@al/aims';
 import {
     AlBehaviorPromise,
     AlLocation,
@@ -6,7 +6,6 @@ import {
     AlStopwatch,
     AlTriggerStream,
 } from '@al/common';
-import { AIMSSessionDescriptor } from '@al/aims';
 import { AlDatacenterSessionEstablishedEvent, AlDatacenterSessionErrorEvent } from '../events';
 
 export class AlConduitClient
