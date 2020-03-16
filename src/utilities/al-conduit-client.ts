@@ -1,7 +1,10 @@
+import { AIMSSessionDescriptor } from '@al/aims';
 import {
-    AlStopwatch, AlBehaviorPromise,
-    AlLocation, AlLocatorService, AlLocationContext,
-    AlTriggerStream
+    AlBehaviorPromise,
+    AlLocation,
+    AlLocatorService,
+    AlStopwatch,
+    AlTriggerStream,
 } from '@al/common';
 import { AIMSSessionDescriptor } from '@al/aims';
 import { AlDatacenterSessionEstablishedEvent, AlDatacenterSessionErrorEvent } from '../events';
@@ -92,7 +95,7 @@ export class AlConduitClient
                 resolver: null,
                 resolved: false
             };
-            listener.promise = new Promise<void>( ( resolve, reject ) => {
+            listener.promise = new Promise<void>( ( resolve ) => {
                 listener.resolver = resolve;
             } );
             AlConduitClient.externalSessions[targetLocationId] = listener;
@@ -122,7 +125,7 @@ export class AlConduitClient
      */
     public deleteSession(): Promise<boolean> {
         return this.request('conduit.deleteSession')
-                    .then( rawResponse => true );
+                    .then( () => true );
     }
 
     /**

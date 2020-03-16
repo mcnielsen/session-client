@@ -8,30 +8,35 @@
  * @copyright 2019 Alert Logic, Inc.
  */
 
+import { AIMSClient } from '@al/aims';
+import {
+    AIMSAccount,
+    AIMSAuthentication,
+    AIMSSessionDescriptor,
+    AIMSUser,
+    AlApiClient,
+    ALClient,
+    AlClientBeforeRequestEvent,
+    AlDefaultClient,
+} from '@al/client';
 import {
     AlBehaviorPromise,
-    AlGlobalizer, AlStopwatch,
-    AlTriggerStream, AlTriggeredEvent,
+    AlCabinet,
+    AlGlobalizer,
+    AlInsightLocations,
+    AlLocation,
+    AlLocatorService,
     AlResponseValidationError,
-    AlLocation, AlLocatorService, AlInsightLocations,
-    AlCabinet
+    AlTriggerStream,
 } from '@al/common';
+import { AlEntitlementCollection, SubscriptionsClient } from '@al/subscriptions';
 import {
-    AlSessionStartedEvent,
-    AlSessionEndedEvent,
     AlActingAccountChangedEvent,
     AlActingAccountResolvedEvent,
-    AlActiveDatacenterChangedEvent
+    AlActiveDatacenterChangedEvent,
+    AlSessionEndedEvent,
+    AlSessionStartedEvent,
 } from './events';
-import {
-    AlChangeStamp, AIMSAuthentication, AIMSUser, AIMSAccount, AIMSSessionDescriptor,      /* core AIMS types */
-    AlApiClient, AlDefaultClient,
-    AIMSJsonSchematics,
-    AlClientBeforeRequestEvent,
-    ALClient
-} from '@al/client';
-import { AIMSClient } from '@al/aims';
-import { AlEntitlementCollection, AlEntitlementRecord, SubscriptionsClient } from '@al/subscriptions';
 import { AlNullSessionDescriptor } from './null-session';
 import { AlConsolidatedAccountMetadata, AlExperienceTree } from './types';
 
@@ -225,7 +230,8 @@ export class AlSessionInstance
      * Successful completion of this action triggers an AlActingAccountChangedEvent so that non-causal elements of an application can respond to
      * the change of effective account and entitlements.
      *
-     * @param {AIMSAccount} The AIMSAccount object representating the account to focus on.
+     * @param account {string|AIMSAccount} The AIMSAccount object representating the account to
+     * focus on.
      *
      * @returns A promise that resolves
      */
@@ -254,7 +260,7 @@ export class AlSessionInstance
       if ( ! this.options.resolveAccountMetadata ) {
         //  If metadata resolution is disabled, still trigger changed/resolved events with basic data
           this.resolvedAccount = new AlActingAccountResolvedEvent( account, new AlEntitlementCollection(), new AlEntitlementCollection(), new AlExperienceTree() );
-        this.notifyStream.trigger( new AlActingAccountChangedEvent( previousAccount, account, this ) );
+        this.notifyStream.trigger( new AlActingAccountChangedEvent( previousAccount, account ) );
         this.resolutionGuard.resolve(true);
         this.notifyStream.trigger( this.resolvedAccount );
         return Promise.resolve( this.resolvedAccount );
@@ -266,7 +272,7 @@ export class AlSessionInstance
             insightLocationId: this.sessionData.boundLocationId,
             accessible: account.accessible_locations
         } );
-        this.notifyStream.trigger( new AlActingAccountChangedEvent( previousAccount, this.sessionData.acting, this ) );
+        this.notifyStream.trigger( new AlActingAccountChangedEvent( previousAccount, this.sessionData.acting ) );
         this.storage.set("session", this.sessionData );
         return await this.options.useConsolidatedResolver
           ? this.resolveActingAccountConsolidated( account )
@@ -346,7 +352,7 @@ export class AlSessionInstance
       this.sessionData = JSON.parse(JSON.stringify(AlNullSessionDescriptor));
       this.sessionIsActive = false;
       this.storage.destroy();
-      this.notifyStream.trigger( new AlSessionEndedEvent( this ) );
+      this.notifyStream.trigger( new AlSessionEndedEvent( ) );
       ALClient.defaultAccountId = null;
       return this.isActive();
     }
@@ -517,7 +523,7 @@ export class AlSessionInstance
 
     /**
      * Convenience method to retrieve the entitlements for the primary account.
-     * See caveats for `ALSession.authenticated` method, which also apply to this method.
+     * See caveats for `AlSession.authenticated` method, which also apply to this method.
      */
     public async getPrimaryEntitlements():Promise<AlEntitlementCollection> {
       return this.resolutionGuard.then( () => this.getPrimaryEntitlementsSync() );
@@ -535,7 +541,7 @@ export class AlSessionInstance
 
     /**
      * Convenience method to retrieve the entitlements for the current acting account.
-     * See caveats for `ALSession.authenticated` method, which also apply to this method.
+     * See caveats for `AlSession.authenticated` method, which also apply to this method.
      */
     public async getEffectiveEntitlements():Promise<AlEntitlementCollection> {
       return this.resolutionGuard.then( () => this.resolvedAccount.entitlements );
@@ -543,7 +549,7 @@ export class AlSessionInstance
 
     /**
      * Convenience method to retrieve the array of accounts managed by the current acting account.
-     * See caveats for `ALSession.authenticated` method, which also apply to this method.
+     * See caveats for `AlSession.authenticated` method, which also apply to this method.
      */
     public async getManagedAccounts():Promise<AIMSAccount[]> {
       return this.resolutionGuard.then( () => AIMSClient.getManagedAccounts( this.getActingAccountId(), { active: true } ) );
@@ -581,7 +587,7 @@ export class AlSessionInstance
                         const account:AIMSAccount                           =   dataObjects[0];
                         const primaryEntitlements:AlEntitlementCollection   =   dataObjects[1];
                         let actingEntitlements:AlEntitlementCollection;
-                        if ( dataObjects.length > 3 ) {
+                        if ( dataObjects.length > 2 ) {
                           actingEntitlements                                =   dataObjects[2];
                         } else {
                           actingEntitlements                                =   primaryEntitlements;
@@ -615,13 +621,12 @@ export class AlSessionInstance
       try {
         let metadata = await ALClient.get( request ) as AlConsolidatedAccountMetadata;
         let experiences = new AlExperienceTree( metadata.experiences );
-        const resolved = new AlActingAccountResolvedEvent(
-          metadata.actingAccount,
-          AlEntitlementCollection.import( metadata.effectiveEntitlements ),
-          AlEntitlementCollection.import( metadata.primaryEntitlements ),
-          experiences
+          this.resolvedAccount = new AlActingAccountResolvedEvent(
+            metadata.actingAccount,
+            AlEntitlementCollection.import(metadata.effectiveEntitlements),
+            AlEntitlementCollection.import(metadata.primaryEntitlements),
+            experiences
         );
-        this.resolvedAccount = resolved;
         this.resolutionGuard.resolve( true );
         this.notifyStream.trigger( this.resolvedAccount );
         return this.resolvedAccount;
