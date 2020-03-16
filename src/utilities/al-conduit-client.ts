@@ -1,4 +1,4 @@
-import { AIMSSessionDescriptor, AIMSSessionDescriptor } from '@al/aims';
+import { AIMSSessionDescriptor } from '@al/aims';
 import {
     AlBehaviorPromise,
     AlLocation,
