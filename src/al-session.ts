@@ -676,4 +676,4 @@ export class AlSessionInstance
 }
 
 /*  tslint:disable:variable-name */
-export const AlSession = AlGlobalizer.instantiate( "AlSession", () => new AlSessionInstance() );
+export const AlSession = AlGlobalizer.instantiate( "AlSession", () => new AlSessionInstance(), "FATAL ERROR: multiple instances of @al/session are running.  Please sanitizer your dependency graph!" );
