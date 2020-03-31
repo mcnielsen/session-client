@@ -38,7 +38,7 @@ import {
     AlSessionStartedEvent,
 } from './events';
 import { AlNullSessionDescriptor } from './null-session';
-import { AlConsolidatedAccountMetadata, AlExperienceTree } from './types';
+import { AlConsolidatedAccountMetadata, AlFoxSnapshot } from './types';
 
 export interface AlSessionOptions {
     /**
@@ -76,7 +76,7 @@ export class AlSessionInstance
     protected resolvedAccount                     =   new AlActingAccountResolvedEvent( null,
                                                                                         new AlEntitlementCollection(),
                                                                                         new AlEntitlementCollection(),
-                                                                                        new AlExperienceTree() );
+                                                                                        new AlFoxSnapshot() );
     protected managedAccounts:AIMSAccount[]       =   [];
     protected resolutionGuard                     =   new AlBehaviorPromise<boolean>();                                               //  This functions as a mutex so that access to resolvedAccount is only available at appropriate times
     protected storage                             =   AlCabinet.persistent( "al_session" );
@@ -259,7 +259,7 @@ export class AlSessionInstance
 
       if ( ! this.options.resolveAccountMetadata ) {
         //  If metadata resolution is disabled, still trigger changed/resolved events with basic data
-          this.resolvedAccount = new AlActingAccountResolvedEvent( account, new AlEntitlementCollection(), new AlEntitlementCollection(), new AlExperienceTree() );
+          this.resolvedAccount = new AlActingAccountResolvedEvent( account, new AlEntitlementCollection(), new AlEntitlementCollection(), new AlFoxSnapshot() );
         this.notifyStream.trigger( new AlActingAccountChangedEvent( previousAccount, account ) );
         this.resolutionGuard.resolve(true);
         this.notifyStream.trigger( this.resolvedAccount );
@@ -596,7 +596,7 @@ export class AlSessionInstance
                         resolved.actingAccount      =   account;
                         resolved.primaryEntitlements=   primaryEntitlements;
                         resolved.entitlements       =   actingEntitlements;
-                        resolved.experiences        =   new AlExperienceTree();
+                        resolved.fox                =   new AlFoxSnapshot();
                         this.resolvedAccount        =   resolved;
                         this.resolutionGuard.resolve(true);
                         this.notifyStream.trigger( resolved );
@@ -620,12 +620,12 @@ export class AlSessionInstance
       };
       try {
         let metadata = await ALClient.get( request ) as AlConsolidatedAccountMetadata;
-        let experiences = new AlExperienceTree( metadata.experiences );
+        let fox = new AlFoxSnapshot( metadata.foxData );
           this.resolvedAccount = new AlActingAccountResolvedEvent(
             metadata.actingAccount,
             AlEntitlementCollection.import(metadata.effectiveEntitlements),
             AlEntitlementCollection.import(metadata.primaryEntitlements),
-            experiences
+            fox
         );
         this.resolutionGuard.resolve( true );
         this.notifyStream.trigger( this.resolvedAccount );
