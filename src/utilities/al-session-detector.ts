@@ -54,12 +54,14 @@ export class AlSessionDetector
     public detectSession( preferredActingAccountId:string = null ): Promise<boolean> {
 
         if ( AlSessionDetector.detectionPromise ) {
-            //  If we're already in the middle of detection, return the promise for the current detectino cycle rather than allowing multiple overlapping
+            //  If we're already in the middle of detection, return the promise for the current detection cycle rather than allowing multiple overlapping
             //  checks to run simultaneously.  No muss, no fuss!
             return AlSessionDetector.detectionPromise;
         }
 
         AlSessionDetector.detectionPromise = new Promise( ( resolve, reject ) => {
+
+            AlSession.startDetection();
 
             /**
              * Does AlSession say we're active?  If so, then yey!
@@ -175,6 +177,7 @@ export class AlSessionDetector
         }
         this.authenticated = false;
         AlSessionDetector.detectionPromise = null;
+        AlSession.endDetection();
         resolve( false );
     }
 
@@ -186,6 +189,7 @@ export class AlSessionDetector
     onDetectionSuccess = ( resolve:{(result:any):any} ) => {
         this.authenticated = true;
         AlSessionDetector.detectionPromise = null;
+        AlSession.endDetection();
         resolve( true );
     }
 

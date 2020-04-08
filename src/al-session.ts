@@ -78,7 +78,9 @@ export class AlSessionInstance
                                                                                         new AlEntitlementCollection(),
                                                                                         new AlFoxSnapshot() );
     protected managedAccounts:AIMSAccount[]       =   [];
-    protected resolutionGuard                     =   new AlBehaviorPromise<boolean>();                                               //  This functions as a mutex so that access to resolvedAccount is only available at appropriate times
+    protected resolutionGuard                     =   new AlBehaviorPromise<boolean>();         //  This functions as a mutex so that access to resolvedAccount is only available at appropriate times.
+    protected detectionGuard                      =   new AlBehaviorPromise<boolean>();         //  resolved after first session detection cycle with no outstanding session detection or account resolution processes in flight.
+    protected detectionProcesses                  =   0;
     protected storage                             =   AlCabinet.persistent( "al_session" );
     protected options:AlSessionOptions = {
         resolveAccountMetadata: true,
@@ -502,6 +504,18 @@ export class AlSessionInstance
     }
 
     /**
+     * Convenience method to defer logic until ALSession has reached a stable state.
+     * For the purposes of this service, "ready" is defined as having completed one or more session detection
+     * cycles AND ( user is unauthenticated OR acting account is resolved ).
+     */
+    public async ready(): Promise<void> {
+        await this.detectionGuard;          //  resolves when first detection process is complete and no other detection cycles are in progress
+        if ( this.isActive() ) {
+            await this.resolved();          //  resolves when acting account information has been loaded and processed
+        }
+    }
+
+    /**
      * Convenience method to wait until authentication status and metadata have been resolved.
      *
      * PLEASE NOTE: that this async function will not resolve until authentication is complete and subscriptions metadata
@@ -553,6 +567,24 @@ export class AlSessionInstance
      */
     public async getManagedAccounts():Promise<AIMSAccount[]> {
       return this.resolutionGuard.then( () => AIMSClient.getManagedAccounts( this.getActingAccountId(), { active: true } ) );
+    }
+
+    /**
+     * Allows an external mechanism to indicate that it is detecting a session.
+     */
+    public startDetection() {
+        this.detectionProcesses += 1;
+        this.detectionGuard.rescind();
+    }
+
+    /**
+     * Allows an external mechanism to indicate that it is done detecting a session.
+     */
+    public endDetection() {
+        this.detectionProcesses -= 1;
+        if ( this.detectionProcesses === 0 ) {
+            this.detectionGuard.resolve( true );
+        }
     }
 
     /**

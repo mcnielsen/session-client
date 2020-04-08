@@ -453,6 +453,45 @@ describe('AlSession', () => {
       } );
     } );
 
+    describe( ".ready()", () => {
+      it("detection guard should block in its initial state", () => {
+        expect( session['detectionGuard']['fulfilled'] ).to.equal( false );
+      } );
+      it("detection guard should be resolved after a session detection cycle in an unauthenticated state", () => {
+        session.startDetection();
+        session.endDetection();
+        expect( session['detectionGuard']['fulfilled'] ).to.equal( true );
+      } );
+      it("it should resolve after session detection/authentication resolved", ( done ) => {
+        //  Dear World: this is an absolutely gruesome test...  my apologies.  Sincerely, Kevin.
+        session.startDetection();
+        setTimeout( () => {
+          session.setAuthentication( exampleSession ).then( () => {
+            session['resolutionGuard'].rescind();       //  pretend we're resolving an acting account
+            session.endDetection();
+            let resolved = false;
+            session.ready().then( () => {
+              console.log("Got session ready!" );
+              resolved = true;
+            }, ( error ) => {
+              expect( true ).to.equal( false );
+            } );
+
+            setTimeout( () => {
+              expect( resolved ).to.equal( false );
+              session['resolutionGuard'].resolve( true );
+              setTimeout( () => {
+                expect( resolved ).to.equal( true );
+                done();
+              }, 1 );
+            }, 1 );
+          }, error => {
+              expect( true ).to.equal( false );
+          } );
+        }, 1 );
+      } );
+    } );
+
     describe( ".getPrimaryEntitlementsSync()", () => {
         it("should return null in an unauthenticated state", () => {
             expect( session.getPrimaryEntitlementsSync() ).to.equal( null );
@@ -504,4 +543,5 @@ describe('AlSession', () => {
     } );
 
   } );
+
 } );
